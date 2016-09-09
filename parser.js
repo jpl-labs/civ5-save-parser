@@ -12,8 +12,8 @@ const fs = require('fs');
           const result = {};
           const buffer = new Buffer(data);
 
-          // Current game turn is at hex position 0x28
-          result.turn = buffer.readUInt32LE(0x28);
+          // Process header information
+          processHeader(buffer, result);
 
           let chunkCount = 0;
           let chunk = {
@@ -21,8 +21,17 @@ const fs = require('fs');
           };
 
           while (null !== (chunk = getChunk(buffer, chunk.endIndex))) {
+            // All civs are in the sixth chunk
+            if (chunkCount === 6){
+              let buffer = {
+                buffer: chunk.buffer,
+                pos: 0
+              };
+
+              console.log(readString(buffer));
+            }
             // The current player byte is at the end of the seventh chunk...
-            if (chunkCount === 7) {
+            else if (chunkCount === 7) {
               // Look backwards from end of chunk for the current player...
               for (let i = chunk.buffer.length - 1; i >= 0; i--) {
                 if (chunk.buffer[i] !== 0) {
@@ -73,4 +82,47 @@ function getChunk(buffer, startIndex) {
   }
 
   return null;
+}
+
+function processHeader(buffer, result){
+  let pos = 0;
+  let buf = {
+    buffer: buffer,
+    pos: 0
+  }
+  result.civ = readString(buf, 4);
+  result.save = readInt(buf);
+  result.game = readString(buf);
+  result.build = readString(buf);
+  result.turn = readInt(buf);
+  //TODO: investigate this Byte
+  buf.pos++;
+  result.startingCiv = readString(buf);
+  result.handicap = readString(buf);
+  result.era = readString(buf);
+  result.currentEra = readString(buf);
+  result.gameSpeed = readString(buf);
+  result.worldSize = readString(buf);
+  result.mapScript = readString(buf);
+}
+
+function readString(buf, length){
+  let result = [];
+  if(!length){
+    length = readInt(buf);
+  }
+  
+  for(let i=0; i<length; i++){
+    result.push(buf.buffer[buf.pos]);
+    buf.pos++;
+  }
+
+  let resBuf = new Buffer(result);
+  return resBuf.toString();
+}
+
+function readInt(buf){
+  let int = buf.buffer.readUInt32LE(buf.pos);
+  buf.pos+=4;
+  return int;
 }
