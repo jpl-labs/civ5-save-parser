@@ -1,0 +1,25 @@
+{
+  "name": "civ5-save-parser",
+  "version": "1.0.0",
+  "description": "Civ5 save file parser allows you to parse out the useful information of a civ5 save file to read which turn it is, which player is up, and which civs are playing as well as modify the player's password and AI/Human setting.",
+  "main": "parser.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/omni-resources/civ5-save-parser.git"
+  },
+  "keywords": [
+    "Civ5",
+    "save",
+    "file",
+    "parser"
+  ],
+  "author": "Matt Schmidt",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/omni-resources/civ5-save-parser/issues"
+  },
+  "homepage": "https://github.com/omni-resources/civ5-save-parser#readme"
+}

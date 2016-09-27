@@ -1,116 +1,169 @@
 'use strict';
 
-const fs = require('fs');
+module.exports = {
+  parse: function(data){
+    const result = {};
+    const buffer = new Buffer(data);
 
-(() => {
-  module.exports.parse = (filename) => {
-    return new Promise((fulfill, reject) => {
-      fs.readFile(filename, (err, data) => {
-        if (err) {
-          reject(err);
-        } else {
-          const result = {};
-          const buffer = new Buffer(data);
+    // Process header information
+    processHeader(buffer, result);
 
-          // Process header information
-          processHeader(buffer, result);
+    let chunkCount = 0;
+    let chunk = {
+      endIndex: 0
+    };
 
-          let chunkCount = 0;
-          let chunk = {
-            endIndex: 0
-          };
-
-          result.civilizations = [];
-          while (null !== (chunk = getChunk(buffer, chunk.endIndex))) {
-            // 2nd chunk contains the type/status of civilization - 1 alive, 2 dead, 3 human, 4 missing
-            if (chunkCount === 2){
-              while(chunk.pos < chunk.buffer.length){
-                result.civilizations.push({
-                  name: "",
-                  leader: "",
-                  type: readInt(chunk)
-                });
-              }
-            }
-
-            // 6th chunk contains all civ names 
-            if (chunkCount === 6){
-              let i = 0;
-              while(chunk.pos < chunk.buffer.length){
-                let civ = readString(chunk);
-                if(civ.trim() !== ''){
-                  result.civilizations[i].name = civ;
-                }
-                i++;
-              }
-            }
-
-            // 7th chunk contains leader names and current player byte
-            // The current player byte is at the end of the seventh chunk...
-            if (chunkCount === 7) {
-              // Read through leader names
-              result.barbarianCount = 0;
-              let i = 0;
-              while(chunk.pos < chunk.buffer.length && i < result.civilizations.length){
-                result.civilizations[i].leader = readString(chunk);
-                if(result.civilizations[i].leader === 'LEADER_BARBARIAN'){
-                  result.barbarianCount++;
-                }
-                i++;
-              }
-              // Look backwards from end of chunk for the current player...
-              for (i = chunk.buffer.length - 1; i >= 0; i--) {
-                if (chunk.buffer[i] !== 0) {
-                  result.player = chunk.buffer[i];
-                  break;
-                }
-              }
-            }
-
-            // 11th chunk contains password
-            if (chunkCount === 11){
-              //not sure whats in the first 8 bytes
-              skipBytes(chunk, 8);
-              result.password = readString(chunk);
-            }
-
-            // 23rd chunk contains player colors
-            if (chunkCount === 23){
-              // Read through player colors
-              let i = 0;
-              while(chunk.pos < chunk.buffer.length && i < result.civilizations.length){
-                result.civilizations[i].color = readString(chunk);
-                i++;
-              }
-            }
-            chunkCount++;
-          }
-
-          //remove missing civs (status 4)
-          for(let i = result.civilizations.length-1; i >= 0; i--) {
-            if(result.civilizations[i].name === '' || result.civilizations[i].type == 4) {
-              result.civilizations.splice(i, 1);
-            }
-          }
-
-          fulfill(result);
+    result.civilizations = [];
+    while (null !== (chunk = getChunk(buffer, chunk.endIndex))) {
+      // 2nd chunk contains the type/status of civilization - 1 alive, 2 dead, 3 human, 4 missing
+      if (chunkCount === 2){
+        while(chunk.pos < chunk.buffer.length){
+          result.civilizations.push({
+            name: "",
+            leader: "",
+            type: readInt(chunk)
+          });
         }
-      });
-    });
-  };
+      }
 
-  if (!module.parent) {
-    if (process.argv.length < 3) {
-      console.log('Please pass the filename as the argument to the script.');
-    } else {
-      module.exports.parse(process.argv[2]).then(result => {
-        console.log(result);
-      });
+      // 6th chunk contains all civ names 
+      if (chunkCount === 6){
+        let i = 0;
+        while(chunk.pos < chunk.buffer.length){
+          let civ = readString(chunk);
+          if(civ.trim() !== ''){
+            result.civilizations[i].name = civ;
+          }
+          i++;
+        }
+      }
+
+      // 7th chunk contains leader names and current player byte
+      // The current player byte is at the end of the seventh chunk...
+      if (chunkCount === 7) {
+        // Read through leader names
+        result.barbarianCount = 0;
+        let i = 0;
+        while(chunk.pos < chunk.buffer.length && i < result.civilizations.length){
+          result.civilizations[i].leader = readString(chunk);
+          if(result.civilizations[i].leader === 'LEADER_BARBARIAN'){
+            result.barbarianCount++;
+          }
+          i++;
+        }
+        // Look backwards from end of chunk for the current player...
+        for (i = chunk.buffer.length - 1; i >= 0; i--) {
+          if (chunk.buffer[i] !== 0) {
+            result.player = chunk.buffer[i];
+            break;
+          }
+        }
+      }
+
+      // 11th chunk contains password
+      if (chunkCount === 11){
+        //not sure whats in the first 4 strings
+        readString(chunk);
+        readString(chunk);
+        readString(chunk);
+        readString(chunk);
+
+        result.password = readString(chunk);
+      }
+
+      // 23rd chunk contains player colors
+      if (chunkCount === 23){
+        // Read through player colors
+        let i = 0;
+        while(chunk.pos < chunk.buffer.length && i < result.civilizations.length){
+          result.civilizations[i].color = readString(chunk);
+          i++;
+        }
+      }
+      chunkCount++;
     }
-  }
-})();
 
-/////
+    //remove missing civs (status 4)
+    for(let i = result.civilizations.length-1; i >= 0; i--) {
+      if(result.civilizations[i].name === '' || result.civilizations[i].type == 4) {
+        result.civilizations.splice(i, 1);
+      }
+    }
+
+    return result;
+  },
+  changeCivType: function(data, position, type){
+      const buffer = new Buffer(data);
+      let result = new Buffer(data);
+
+      let chunkCount = 0;
+      let chunk = {
+        endIndex: 0
+      };
+
+      while (null !== (chunk = getChunk(buffer, chunk.endIndex))) {
+        // 2nd chunk contains the type/status of civilization - 1 alive, 2 dead, 3 human, 4 missing
+        if (chunkCount === 2){
+          let civCount = 0;
+          let abort = false;
+          while(chunk.pos < chunk.buffer.length){
+            if(civCount === position){
+              let pos = chunk.startIndex + chunk.pos;
+              let civType = result.slice(pos, pos + 4);
+              civType.writeUInt32LE(type, 0 );
+            }
+
+            readInt(chunk);
+            civCount++;
+          }
+        }
+        
+        chunkCount++;
+      }
+
+      return result;
+  },
+  changeCivPassword: function(data, password){
+    const buffer = new Buffer(data);
+    let result;
+
+    let chunkCount = 0;
+    let chunk = {
+      endIndex: 0
+    };
+
+    while (null !== (chunk = getChunk(buffer, chunk.endIndex))) {
+      // 11th chunk contains password
+      if (chunkCount === 11){
+        //not sure whats in the first 4 strings
+        readString(chunk);
+        readString(chunk);
+        readString(chunk);
+        readString(chunk);
+
+        let pos = chunk.startIndex + chunk.pos;
+        let encodedPassword = encodeString(password);
+        let currentPassword = readString(chunk);
+        
+        //create new buffer with new length
+        result = new Buffer(buffer.length - (currentPassword.length + 4) + encodedPassword.length);
+
+        //get buffer before password
+        buffer.copy(result, 0, 0, pos);
+        //add password to buffer
+        encodedPassword.copy(result, pos, 0, encodedPassword.length);
+        //copy the rest of the buffer starting after the existing password 
+        buffer.copy(result, pos + encodedPassword.length, 0, buffer.length - (pos + currentPassword.length + 4));
+      }
+
+      chunkCount++;
+    }
+
+    return result;
+  }
+};
+
+// Parse helper functions
 
 function getChunk(buffer, startIndex) {
   const delimiter = new Buffer([0x40, 0, 0, 0]);
@@ -182,4 +235,15 @@ function readInt(buf){
 
 function skipBytes(buf, num){
   buf.pos += num;
+}
+
+// Write helper functions
+function encodeString(text){
+  let length = text.length;
+  let result = new Buffer(length+4);
+
+  result.writeUInt32LE(length, 0);
+  result.write(text, 4);
+
+  return result;
 }
