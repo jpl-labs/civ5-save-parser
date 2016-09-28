@@ -1,1 +1,2 @@
-/saves/*
+/node_modules/*
+/.vscode/*

@@ -2,27 +2,52 @@
 
 const parser = require('./parser.js');
 const fs = require('fs');
+const assert = require('assert');
 
-(() => {
-    if (!module.parent) {
-        if (process.argv.length < 3) {
-            console.log('Please pass the filename as the argument to the script.');
-        } else {
-            fs.readFile(process.argv[2], (err, data) => {
-                let result = parser.changeCivType(data, 2, 1);
-                let result2 = parser.parse(result);
-                console.log(result2);
-            });
+describe('Parser', function() {
+  describe('#Validate Civ Types', function() {
+    let data = fs.readFileSync('./saves/newSlack19-before.Civ5Save');
+    let result = parser.parse(data);
 
+    result.civilizations.forEach(function(s) {
+      it('Civ type should be in range 1-3', function() {
+        assert.notEqual(-1, [1,2,3].indexOf(s.type));
+      });
+    });
 
-            fs.readFile(process.argv[2], (err, data) => {
-                let result = parser.changeCivPassword(data, "testing");
-                fs.writeFile(process.argv[2] + '-new', result, err => {
-                    if (err) throw err;
-                });
-                let result2 = parser.parse(result);
-                console.log(result2);
-            });
-        }
-    }
-})();
+    it('default password should be berlin', function() {
+      assert.equal('berlin', result.password);
+    });
+  });
+});
+
+describe('ChangeCivPassword', function() {
+  describe('#Validate Civ Types', function() {
+    //Test values
+    let newPassword = "testing";
+
+    let data = fs.readFileSync('./saves/newSlack19-before.Civ5Save');
+    let changePasswordResult = parser.changeCivPassword(data, newPassword);
+    let result = parser.parse(changePasswordResult);
+
+    it('default password should be changed to ' + newPassword, function() {
+      assert.equal(newPassword, result.password);
+    });
+  });
+});
+
+describe('ChangeCivType', function() {
+  describe('#Validate Civ Types', function() {
+    //Test values
+    let changePosition = 2;
+    let changeValue = 1; 
+
+    let data = fs.readFileSync('./saves/newSlack19-before.Civ5Save');
+    let changeCivTypeResult = parser.changeCivType(data, changePosition, changeValue);
+    let result = parser.parse(changeCivTypeResult);
+
+    it('Civ type for position ' + changePosition + ' should be updated to ' + changeValue, function() {
+      assert.equal(changeValue, result.civilizations[changePosition].type);
+    });
+  });
+});
