@@ -21,7 +21,7 @@ module.exports = {
           result.civilizations.push({
             name: "",
             leader: "",
-            type: readInt(chunk)
+            type: readInt(chunk),
           });
         }
       }
@@ -60,15 +60,13 @@ module.exports = {
         }
       }
 
-      // 11th chunk contains password
+      // 11th chunk contains passwords
       if (chunkCount === 11){
-        //not sure whats in the first 4 strings
-        readString(chunk);
-        readString(chunk);
-        readString(chunk);
-        readString(chunk);
-
-        result.password = readString(chunk);
+        let i = 0;
+        while(chunk.pos < chunk.buffer.length && i < result.civilizations.length){
+          result.civilizations[i].password = readString(chunk);
+          i++;
+        }
       }
 
       // 23rd chunk contains player colors
@@ -123,7 +121,7 @@ module.exports = {
 
       return result;
   },
-  changeCivPassword: function(data, password){
+  changeCivPassword: function(data, position, password){
     const buffer = new Buffer(data);
     let result;
 
@@ -135,19 +133,15 @@ module.exports = {
     while (null !== (chunk = getChunk(buffer, chunk.endIndex))) {
       // 11th chunk contains password
       if (chunkCount === 11){
-        //not sure whats in the first 4 strings
-        readString(chunk);
-        readString(chunk);
-        readString(chunk);
-        readString(chunk);
-
+        for(let i=0; i<position; i++){
+          readString(chunk);
+        }
         let pos = chunk.startIndex + chunk.pos;
         let encodedPassword = encodeString(password);
         let currentPassword = readString(chunk);
-        
+
         //create new buffer with new length
         result = new Buffer(buffer.length - (currentPassword.length + 4) + encodedPassword.length);
-
         //get buffer before password
         buffer.copy(result, 0, 0, pos);
         //add password to buffer
@@ -214,7 +208,7 @@ function readString(buf, length){
   let result = [];
   if(!length){
     length = readInt(buf);
-    if(length == 0)
+    if(length === 0 || length > 1000)
       return '';
   }
   

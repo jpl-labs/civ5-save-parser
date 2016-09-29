@@ -4,8 +4,9 @@ const parser = require('./parser.js');
 const fs = require('fs');
 const assert = require('assert');
 
+
 describe('Parser', function() {
-  describe('#Validate Civ Types', function() {
+  describe('#Validate Civ Parser', function() {
     let data = fs.readFileSync('./saves/newSlack19-before.Civ5Save');
     let result = parser.parse(data);
 
@@ -16,22 +17,22 @@ describe('Parser', function() {
     });
 
     it('default password should be berlin', function() {
-      assert.equal('berlin', result.password);
+      assert.equal('berlin', result.civilizations[4].password);
     });
   });
 });
 
 describe('ChangeCivPassword', function() {
-  describe('#Validate Civ Types', function() {
+  describe('#Validate Civ Password', function() {
     //Test values
     let newPassword = "testing";
+    let changePosition = 4;
 
     let data = fs.readFileSync('./saves/newSlack19-before.Civ5Save');
-    let changePasswordResult = parser.changeCivPassword(data, newPassword);
+    let changePasswordResult = parser.changeCivPassword(data, changePosition, newPassword);
     let result = parser.parse(changePasswordResult);
-
     it('default password should be changed to ' + newPassword, function() {
-      assert.equal(newPassword, result.password);
+      assert.equal(newPassword, result.civilizations[changePosition].password);
     });
   });
 });
